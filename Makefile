@@ -1,9 +1,9 @@
 CC = gcc
-CFLAGS = -std=c89 -Wall -Wextra -pedantic
-LDFLAGS = -lpthread 
+CFLAGS = -Wall -Wextra -pedantic
+LDFLAGS = -lpthread -lrt 
 
-OBJS = phil.o
-TARGET = phil
+OBJS = dine.o
+TARGET = dine
 
 all: $(TARGET)
 
