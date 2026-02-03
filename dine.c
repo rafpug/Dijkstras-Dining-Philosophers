@@ -19,6 +19,20 @@
 /* Longest name for philosopher states, in this case its 'Think\0' */
 #define MAX_STATE_NAME 6
 
+/* The number of spacing characters between elements in the printout column */
+#define PADDING 1
+
+/* Length of the left side of a column */
+#define LEFTPAD PADDING + NUM_PHILOSOPHERS
+
+/* Length of the right side of a column */
+#define RIGHTPAD MAX_STATE_NAME + PADDING
+
+/* Length of a column not including its edges */
+#define COLUMN_LENGTH LEFTPAD + PADDING + RIGHTPAD
+
+#define TABLE_LENGTH 1 + NUM_PHILOSOPHERS * (COLUMN_LENGTH + 1)
+
 struct Philosopher {
     char name;
     char state[MAX_STATE_NAME];
@@ -49,6 +63,55 @@ void dawdle() {
     if (-1 == nanosleep(&tv, NULL)) {
         perror("nanosleep");
     }
+}
+
+void print_
+
+void print_header(void) {
+    int i;
+    char border[TABLE_LENGTH + 1];
+    char labels[TABLE_LENGTH + 1];
+
+    char column_border[COLUMN_LENGTH + 1];
+    char left_padding[LEFTPAD + 1];
+    char right_padding[RIGHTPAD + 1];
+
+    border[0] = '\0';
+    labels[0] = '\0';
+
+    column_border[COLUMN_LENGTH] = '\0';
+    left_padding[LEFTPAD] = '\0';
+    right_padding[RIGHTPAD] = '\0';
+    
+    for (i=0;i<COLUMN_LENGTH;i++) {
+        column_border[i] = '=';
+
+        if (i < LEFTPAD) {
+            left_padding[i] = ' ';
+        }
+        if (i < RIGHTPAD) {
+            right_padding[i] = ' ';
+        }
+    }
+ 
+    strcat(border, "|");
+    strcat(labels, "|");
+
+    for (i=0;i<NUM_PHILOSOPHERS;i++) {
+        char name[2];
+        name[0] = (char) i + 'A';
+        name[1] = '\0';
+
+        strcat(border, column_border);
+        strcat(border, "|");
+
+        strcat(labels, left_padding);
+        strcat(labels, name);
+        strcat(labels, right_padding);
+        strcat(labels, "|");
+    }
+
+    printf("%s\n%s\n%s\n", border, labels, border);
 }
 
 int main(int argc, char *argv[]) {
@@ -91,5 +154,7 @@ int main(int argc, char *argv[]) {
 
         printf("new phil: %c\n", table[i].name);
     }
+
+    print_header();
     return 0;
 }
