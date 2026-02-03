@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #ifndef NUM_PHILOSOPHERS
 #define NUM_PHILOSOPHERS 5
@@ -16,8 +17,8 @@
 /* Default number of times a philosopher repeats their eat/think cycle */
 #define DEFAULT_REPS 1
 
-/* Longest name for philosopher states, in this case its 'Think\0' */
-#define MAX_STATE_NAME 6
+/* Longest name for philosopher states, in this case its 'Think' */
+#define MAX_STATE_NAME 5
 
 /* The number of spacing characters between elements in the printout column */
 #define PADDING 1
@@ -31,11 +32,12 @@
 /* Length of a column not including its edges */
 #define COLUMN_LENGTH LEFTPAD + PADDING + RIGHTPAD
 
+/* Length of the printout table including its edges */
 #define TABLE_LENGTH 1 + NUM_PHILOSOPHERS * (COLUMN_LENGTH + 1)
 
 struct Philosopher {
     char name;
-    char state[MAX_STATE_NAME];
+    char state[MAX_STATE_NAME + 1];
     
     /* Boolean for the philosopher's left fork, 
      *      zero when not holding and nonzero otherwise */
@@ -48,6 +50,9 @@ struct Philosopher {
 
 /* The table of philisophers ready to eat, initialized as an array */
 struct Philosopher *table = NULL;
+
+/* An array of forks, each with their own semaphore */
+sem_t *forks = NULL;
 
 void dawdle() {
 /*
@@ -65,7 +70,62 @@ void dawdle() {
     }
 }
 
-void print_
+/* Returns the index of the philosopher's left fork 
+ * based on their own index
+ * No special cases */
+int get_left_fork(int id) {
+    return id;
+}
+
+/* Returns the index of the philosopher's right fork 
+ * based on their own index
+ * Special case with the last philosopher using the first fork*/
+int get_right_fork(int id) {
+    int fork_idx = id + 1;
+    if (fork_idx == NUM_PHILOSOPHERS) {
+           return 0;
+    }
+    return fork_idx;
+}
+
+void print_table(void) {
+    int i;
+    char pad[PADDING];
+
+    for (i=0;i<PADDING;i++) {
+        pad[i] = ' ';
+    }
+
+    printf("|");
+    
+    for (i=0;i<NUM_PHILOSOPHERS;i++) {
+        int v;
+
+        int holding_left = table[i].forkl;
+        int holding_right = table[i].forkr;
+        
+        int left_fork = get_left_fork(i);
+        int right_fork = get_right_fork(i);
+
+        printf("%s", pad);
+        
+        for (v=0;v<NUM_PHILOSOPHERS;v++) {
+            if (v == left_fork && holding_left) {
+                printf("%d", v);
+            }
+            else if (v == right_fork && holding_right) {
+                printf("%d", v);
+            }
+            else {
+                printf("-");
+            }
+        }
+        
+        printf("%s%s%s|", pad, table[i].state, pad);
+    }
+    printf("\n");
+}
+        
 
 void print_header(void) {
     int i;
@@ -74,7 +134,7 @@ void print_header(void) {
 
     char column_border[COLUMN_LENGTH + 1];
     char left_padding[LEFTPAD + 1];
-    char right_padding[RIGHTPAD + 1];
+    char right_padding[RIGHTPAD + 1]; 
 
     border[0] = '\0';
     labels[0] = '\0';
@@ -112,6 +172,7 @@ void print_header(void) {
     }
 
     printf("%s\n%s\n%s\n", border, labels, border);
+    print_table();
 }
 
 int main(int argc, char *argv[]) {
