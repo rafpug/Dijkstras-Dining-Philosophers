@@ -41,6 +41,9 @@
 
 #define INIT_VALUE 1
 
+/* boolean for whether a fork is being held */
+#define HELD 1
+
 struct Philosopher {
     char name;
     char state[MAX_STATE_NAME + 1];
@@ -52,6 +55,8 @@ struct Philosopher {
     /* Boolean for the philosopher's right fork,
      *      zero when not holding and nonzero otherwise */
     int forkr;
+
+    int reps;
 };
 
 /* The table of philisophers ready to eat, initialized as an array */
@@ -59,6 +64,10 @@ struct Philosopher *table = NULL;
 
 /* An array of forks, each with their own semaphore */
 sem_t *forks = NULL;
+
+/* Semaphore that blocks when a philosphor is changing states
+ * This allows for printing individual state changes */
+sem_t printing;
 
 void dawdle() {
 /*
@@ -178,7 +187,102 @@ void print_header(void) {
     }
 
     printf("%s\n%s\n%s\n", border, labels, border);
-    print_table();
+}
+
+void *dine(void *id) {
+    int whoami = *(int*)id;
+    int left_fork = get_left_fork(whoami);
+    int right_fork = get_right_fork(whoami);
+    
+    while (table[whoami].reps > 0) {
+        sem_t *first_fork;
+        sem_t *second_fork;
+
+        int *fork1;
+        int *fork2;
+        
+        /* Decide which fork to take first to avoid deadlock */
+        if (whoami % 2 == 0) {
+            /* Even philosophers take the right fork first */
+            first_fork = &forks[right_fork];
+            second_fork = &forks[left_fork];
+
+            fork1 = *table[whoami].forkr;
+            fork2 = *table[whoami].forkl;
+        }
+        else {
+            /* Odd philosophers take the left fork first */
+            first_fork = &forks[left_fork];
+            second_fork = &forks[right_fork];
+
+            fork1 = *table[whoami].forkl;
+            fork2 = *table[whoami].forkr;
+        }
+
+        /* Blocks until first fork */
+        sem_wait(first_fork);
+            
+        sem_wait(&printing);
+        *fork1 = HELD;
+        print_table();
+        sem_post(&printing);
+        
+        /* Blocks until second fork */
+        sem_wait(second_fork);
+
+        sem_wait(&printing);
+        *fork2 = HELD;
+        print_table();
+        sem_post(&printing);
+
+        /* The philosopher can now begin eating with their two forks */
+
+        sem_wait(&printing);
+        strcpy(table[whoami].state, "Eat  ");
+        print_table();
+        sem_post(&printing);
+        
+        /* Philosophers take a random amount of time eating */
+        dawdle();
+        
+        /* Philospher finished eating */
+        sem_wait(&printing);
+        strcpy(table[whoami].state, "     ");
+        print_table();
+        sem_post(&printing);
+
+        /* Release our second fork */
+        sem_post(second_fork);
+
+        sem_wait(&printing);
+        *fork2 = !HELD;
+        print_table();
+        sem_post(&printing);
+        
+        /* Release our first fork */
+        sem_post(first_fork);
+        
+        sem_wait(&printing);
+        *fork1 = !HELD;
+        print_table();
+        sem_post(&printing);
+
+        /* Philosphers can now freely think for a random amount of time */
+        sem_wait(&printing);
+        strcpy(table[whoami].state, "Think");
+        print_table();
+        sem_post(&printing);
+        
+        dawdle();
+
+        /* Thinking philosophers will become hungry after thinking */
+        sem_wait(&printing);
+        strcpy(table[whoami].state, "     ");
+        print_table();
+        sem_post(&printing);
+
+        table[whoami].reps -= 1;
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -221,12 +325,21 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    if (sem_init(&printing, PSHARED, INIT_VALUE)) {
+        perror("Failed to init semaphore");
+        free(forks);    
+        free(table);
+    }
+
+
     for (i=0; i<NUM_PHILOSOPHERS; i++) {
         int err;
 
         id[i] = i;
+
         table[i].name = BASE_PHIL_NAME + i;
         strcpy(table[i].state, "     ");
+        table[i].reps = reps;
 
         err = sem_init(&forks[i], PSHARED, INIT_VALUE);
         if (err) {
@@ -240,6 +353,7 @@ int main(int argc, char *argv[]) {
     }
 
     print_header();
+    print_table();
 
     for (i=0; i<NUM_PHILOSOPHERS; i++) {
         int res;
