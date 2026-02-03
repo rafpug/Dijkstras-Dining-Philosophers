@@ -105,7 +105,8 @@ int get_right_fork(int id) {
 
 void print_table(void) {
     int i;
-    char pad[PADDING];
+    char pad[PADDING+1];
+    pad[PADDING] = '\0';
 
     for (i=0;i<PADDING;i++) {
         pad[i] = ' ';
@@ -294,7 +295,7 @@ int main(int argc, char *argv[]) {
     int reps;
     
     /* Character id to be passed to each philosopher */
-    char ids[NUM_PHILOSOPHERS];
+    int ids[NUM_PHILOSOPHERS];
     
     /* activations for each philosopher */
     pthread_t philosophers[NUM_PHILOSOPHERS];
