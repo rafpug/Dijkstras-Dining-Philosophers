@@ -35,6 +35,12 @@
 /* Length of the printout table including its edges */
 #define TABLE_LENGTH 1 + NUM_PHILOSOPHERS * (COLUMN_LENGTH + 1)
 
+#define BASE_PHIL_NAME 'A'
+
+#define PSHARED 0
+
+#define INIT_VALUE 1
+
 struct Philosopher {
     char name;
     char state[MAX_STATE_NAME + 1];
@@ -159,7 +165,7 @@ void print_header(void) {
 
     for (i=0;i<NUM_PHILOSOPHERS;i++) {
         char name[2];
-        name[0] = (char) i + 'A';
+        name[0] = (char) i + BASE_PHIL_NAME;
         name[1] = '\0';
 
         strcat(border, column_border);
@@ -183,10 +189,10 @@ int main(int argc, char *argv[]) {
     int reps;
     
     /* Character id to be passed to each philosopher */
-    char id[NUM_PHILOSOPHERS];
+    char ids[NUM_PHILOSOPHERS];
     
     /* activations for each philosopher */
-    pthread_t pid[NUM_PHILOSOPHERS];
+    pthread_t philosophers[NUM_PHILOSOPHERS];
 
     if (argc < 2) {
         reps = DEFAULT_REPS;
@@ -198,24 +204,60 @@ int main(int argc, char *argv[]) {
     if (reps < 1) {
         fprintf(stderr, 
             "Expected a valid amount of repititions, instead got %d\n", reps);
-        return 1;
+        return EXIT_FAILURE;
     }
     printf("Reps: %d\n", reps);
     
     table = (struct Philosopher *) calloc(NUM_PHILOSOPHERS, sizeof(struct Philosopher));    
     if (!table) {
+        perror("Calloc failed");
+        exit(EXIT_FAILURE);
+    }
+
+    forks = (sem_t *) malloc(NUM_PHILOSOPHERS * sizeof(sem_t));
+    if (!forks) {
         perror("Malloc failed");
-        return 1;
+        free(table);
+        exit(EXIT_FAILURE);
     }
 
     for (i=0; i<NUM_PHILOSOPHERS; i++) {
+        int err;
+
         id[i] = i;
-        table[i].name = 'A' + i;
+        table[i].name = BASE_PHIL_NAME + i;
         strcpy(table[i].state, "     ");
+
+        err = sem_init(&forks[i], PSHARED, INIT_VALUE);
+        if (err) {
+            perror("Failed to init semaphore");
+            free(forks);
+            free(table);
+            exit(EXIT_FAILURE);
+        }
 
         printf("new phil: %c\n", table[i].name);
     }
 
     print_header();
-    return 0;
+
+    for (i=0; i<NUM_PHILOSOPHERS; i++) {
+        int res;
+        res = pthread_create(
+                        &philosophers[i],
+                        NULL,
+                        dine,
+                        (void *) &ids[i]);
+    
+    if (res == -1) {
+        fprintf(stderr, "Child %i: %s\n", i, strerror(res);
+        exit(EXIT_FAILURE);
+    }
+
+    for(i=0; i<NUM_PHILOSOPHERS; i++) {
+        pthread_join(philosophers[i], NULL);
+    }
+
+    print_header();
+    return EXIT_SUCCESS;
 }
