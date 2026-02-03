@@ -1,3 +1,23 @@
+/* SOURCE FILE: dine.c
+ * Made by: Rafael Salcedo
+ *
+ * This project was about implementing a solution to 
+ * Dijkstras' dining philosophers problem.
+ *
+ * The problem is that we have a circular table of philosophers
+ * who have a bowl of pasta in front of them. There is
+ * one fork on the table for every philosopher. Philosophers need
+ * two forks to eat their food and refuse to release forks they've
+ * grabbed until they finish eating. Then they release the forks
+ * and think until they are hungry again
+ *
+ * This solution uses POSIX semaphores to control individual forks
+ * and uses threads to simulate the philosophers.
+ *
+ * You can control the number of philosophers and the number of times
+ * they repeat the cycle of eating and thinking
+ *
+ */
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -375,7 +395,9 @@ int main(int argc, char *argv[]) {
 
     for(i=0; i<NUM_PHILOSOPHERS; i++) {
         pthread_join(philosophers[i], NULL);
+        sem_destroy(&forks[i]);
     }
+    sem_destroy(&printing);
 
     print_header();
 
