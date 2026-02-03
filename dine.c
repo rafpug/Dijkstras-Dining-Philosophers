@@ -299,7 +299,10 @@ int main(int argc, char *argv[]) {
     
     /* activations for each philosopher */
     pthread_t philosophers[NUM_PHILOSOPHERS];
-
+    
+    /* Sets a unique seed */
+    srandom(time(NULL));
+    
     if (argc < 2) {
         reps = DEFAULT_REPS;
     }
@@ -312,7 +315,6 @@ int main(int argc, char *argv[]) {
             "Expected a valid amount of repititions, instead got %d\n", reps);
         return EXIT_FAILURE;
     }
-    printf("Reps: %d\n", reps);
     
     table = (struct Philosopher *) calloc(NUM_PHILOSOPHERS, sizeof(struct Philosopher));    
     if (!table) {
@@ -350,8 +352,6 @@ int main(int argc, char *argv[]) {
             free(table);
             exit(EXIT_FAILURE);
         }
-
-        printf("new phil: %c\n", table[i].name);
     }
 
     print_header();
