@@ -207,16 +207,16 @@ void *dine(void *id) {
             first_fork = &forks[right_fork];
             second_fork = &forks[left_fork];
 
-            fork1 = *table[whoami].forkr;
-            fork2 = *table[whoami].forkl;
+            fork1 = &table[whoami].forkr;
+            fork2 = &table[whoami].forkl;
         }
         else {
             /* Odd philosophers take the left fork first */
             first_fork = &forks[left_fork];
             second_fork = &forks[right_fork];
 
-            fork1 = *table[whoami].forkl;
-            fork2 = *table[whoami].forkr;
+            fork1 = &table[whoami].forkl;
+            fork2 = &table[whoami].forkr;
         }
 
         /* Blocks until first fork */
@@ -283,6 +283,7 @@ void *dine(void *id) {
 
         table[whoami].reps -= 1;
     }
+    return NULL;
 }
 
 int main(int argc, char *argv[]) {
@@ -335,7 +336,7 @@ int main(int argc, char *argv[]) {
     for (i=0; i<NUM_PHILOSOPHERS; i++) {
         int err;
 
-        id[i] = i;
+        ids[i] = i;
 
         table[i].name = BASE_PHIL_NAME + i;
         strcpy(table[i].state, "     ");
@@ -363,9 +364,12 @@ int main(int argc, char *argv[]) {
                         dine,
                         (void *) &ids[i]);
     
-    if (res == -1) {
-        fprintf(stderr, "Child %i: %s\n", i, strerror(res);
-        exit(EXIT_FAILURE);
+        if (res == -1) {
+            fprintf(stderr, "Child %i: %s\n", i, strerror(res));
+            free(forks);
+            free(table);
+            exit(EXIT_FAILURE);
+        }
     }
 
     for(i=0; i<NUM_PHILOSOPHERS; i++) {
@@ -373,5 +377,8 @@ int main(int argc, char *argv[]) {
     }
 
     print_header();
+
+    free(forks);
+    free(table);
     return EXIT_SUCCESS;
 }
