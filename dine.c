@@ -57,6 +57,7 @@
 
 #define BASE_PHIL_NAME 'A'
 
+/* PSHARED and INIT_VALUE are used for initializing semaphores */
 #define PSHARED 0
 
 #define INIT_VALUE 1
@@ -123,17 +124,21 @@ int get_right_fork(int id) {
     return fork_idx;
 }
 
+/* Prints out one row of the table printout */
 void print_table(void) {
     int i;
     char pad[PADDING+1];
     pad[PADDING] = '\0';
-
+    
+    /* Fills pad with whitespace */
     for (i=0;i<PADDING;i++) {
         pad[i] = ' ';
     }
 
+    /* Prints out the left border of the row */
     printf("|");
     
+    /* Prints out each subcolumn for a philosopher */
     for (i=0;i<NUM_PHILOSOPHERS;i++) {
         int v;
 
@@ -145,7 +150,10 @@ void print_table(void) {
 
         printf("%s", pad);
         
+        /* Prints out the sequence of forks for each philosopher */
         for (v=0;v<NUM_PHILOSOPHERS;v++) {
+            /* Prints out - for forks not being held 
+             * Prints out fork # for forks held by the philosopher */
             if (v == left_fork && holding_left) {
                 printf("%d", v);
             }
@@ -156,15 +164,20 @@ void print_table(void) {
                 printf("-");
             }
         }
-        
+        /* Prints out the state of the philosopher 
+         * with padding + right column border */
         printf("%s%s%s|", pad, table[i].state, pad);
     }
     printf("\n");
 }
         
-
+/* Prints out the header of the printout for the table of philosophers 
+ * This header contains the names of each philosopher for their column 
+ * I divided the header into three rows... 
+ * top border, labels, and bottom border */
 void print_header(void) {
     int i;
+    
     char border[TABLE_LENGTH + 1];
     char labels[TABLE_LENGTH + 1];
 
@@ -179,43 +192,66 @@ void print_header(void) {
     left_padding[LEFTPAD] = '\0';
     right_padding[RIGHTPAD] = '\0';
     
+    
     for (i=0;i<COLUMN_LENGTH;i++) {
+        /* Fills the top/bottom border subcolumn with '=' */
         column_border[i] = '=';
 
         if (i < LEFTPAD) {
+            /* Fills the left side of the labels with whitespace */
             left_padding[i] = ' ';
         }
         if (i < RIGHTPAD) {
+            /* Fills the right side of the labels with whitespace */
             right_padding[i] = ' ';
         }
     }
  
+    /* Start both the borders and label row with the left line */
     strcat(border, "|");
     strcat(labels, "|");
-
+    
+    /* Appends each subcolumn of the table */
     for (i=0;i<NUM_PHILOSOPHERS;i++) {
+        /* Initializes the name as an array */
         char name[2];
         name[0] = (char) i + BASE_PHIL_NAME;
         name[1] = '\0';
-
+        
+        /* Appends all the '=' with a right line to the borders */
         strcat(border, column_border);
         strcat(border, "|");
-
+        
+        /* Appends the padding, name, and line to the labels */
         strcat(labels, left_padding);
         strcat(labels, name);
         strcat(labels, right_padding);
         strcat(labels, "|");
     }
 
+    /* Actually prints out the three header rows to stdout */
     printf("%s\n%s\n%s\n", border, labels, border);
 }
 
+/* Prints out a change in the forks a philosopher grabbed */
+void print_fork(int *fork, int holding) {
+    sem_wait(&printing);
+    *fork = holding;
+    print_table();
+    sem_post(&printing);   
+}
+
+/* Executes philosopher's behaviour, ran by initialized threads */
 void *dine(void *id) {
     int whoami = *(int*)id;
+    /* Retrieves indexes of forks adjacent to the philosopher */
     int left_fork = get_left_fork(whoami);
     int right_fork = get_right_fork(whoami);
     
+    /* Philosophers cycle between eating and 
+     * thinking until they run out of reps */
     while (table[whoami].reps > 0) {
+
         sem_t *first_fork;
         sem_t *second_fork;
 
@@ -242,19 +278,11 @@ void *dine(void *id) {
 
         /* Blocks until first fork */
         sem_wait(first_fork);
-            
-        sem_wait(&printing);
-        *fork1 = HELD;
-        print_table();
-        sem_post(&printing);
+        print_fork(fork1, HELD);
         
         /* Blocks until second fork */
-        sem_wait(second_fork);
-
-        sem_wait(&printing);
-        *fork2 = HELD;
-        print_table();
-        sem_post(&printing);
+        sem_wait(second_fork); 
+        print_fork(fork2, HELD);
 
         /* The philosopher can now begin eating with their two forks */
 
@@ -274,19 +302,11 @@ void *dine(void *id) {
 
         /* Release our second fork */
         sem_post(second_fork);
-
-        sem_wait(&printing);
-        *fork2 = !HELD;
-        print_table();
-        sem_post(&printing);
+        print_fork(fork2, !HELD);
         
         /* Release our first fork */
         sem_post(first_fork);
-        
-        sem_wait(&printing);
-        *fork1 = !HELD;
-        print_table();
-        sem_post(&printing);
+        print_fork(fork1, !HELD);
 
         /* Philosphers can now freely think for a random amount of time */
         sem_wait(&printing);
@@ -355,7 +375,8 @@ int main(int argc, char *argv[]) {
         free(table);
     }
 
-
+    /* Initializes the table structures for each philosopher
+     * and the semaphore for each fork */ 
     for (i=0; i<NUM_PHILOSOPHERS; i++) {
         int err;
 
@@ -376,7 +397,8 @@ int main(int argc, char *argv[]) {
 
     print_header();
     print_table();
-
+    
+    /* Creates the thread that executes the behaviour of each philosopher */
     for (i=0; i<NUM_PHILOSOPHERS; i++) {
         int res;
         res = pthread_create(
@@ -393,6 +415,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    /* Cleans up the threads + allocations + semaphores */
     for(i=0; i<NUM_PHILOSOPHERS; i++) {
         pthread_join(philosophers[i], NULL);
         sem_destroy(&forks[i]);

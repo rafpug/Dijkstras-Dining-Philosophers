@@ -11,7 +11,7 @@ $(TARGET) : $(OBJS)
 	$(CC) $(LDFLAGS) $^ -o $@
 
 phil.o : phil.c
-	$(CC) -g $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) $(TARGET)
