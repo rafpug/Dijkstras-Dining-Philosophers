@@ -171,33 +171,50 @@ void print_table(void) {
     }
     printf("\n");
 }
+
+/* Prints out the horizontal border row for table printout */
+void print_horizontal_border(void) {
+    int i;
+    
+    char column_border[COLUMN_LENGTH + 1];
+    
+    column_border[COLUMN_LENGTH] = '\0';
+
+    /* Fills the portions of the border within a column with '=' */
+    for (i=0; i<COLUMN_LENGTH; i++) {
+        column_border[i] = '=';
+    }
+    
+    /* Start this row of border with a vertical line */
+    printf("|");
+    
+    /* For ever philosopher we print out a column worth of border */
+    for (i=0; i<NUM_PHILOSOPHERS; i++) {
+        printf("%s|", column_border);
+    }
+    
+    printf("\n");
+}
         
 /* Prints out the header of the printout for the table of philosophers 
  * This header contains the names of each philosopher for their column 
- * I divided the header into three rows... 
+ * Divided the header into three rows... 
  * top border, labels, and bottom border */
 void print_header(void) {
     int i;
     
-    char border[TABLE_LENGTH + 1];
     char labels[TABLE_LENGTH + 1];
 
-    char column_border[COLUMN_LENGTH + 1];
     char left_padding[LEFTPAD + 1];
     char right_padding[RIGHTPAD + 1]; 
 
-    border[0] = '\0';
     labels[0] = '\0';
 
-    column_border[COLUMN_LENGTH] = '\0';
     left_padding[LEFTPAD] = '\0';
     right_padding[RIGHTPAD] = '\0';
     
     
     for (i=0;i<COLUMN_LENGTH;i++) {
-        /* Fills the top/bottom border subcolumn with '=' */
-        column_border[i] = '=';
-
         if (i < LEFTPAD) {
             /* Fills the left side of the labels with whitespace */
             left_padding[i] = ' ';
@@ -208,8 +225,7 @@ void print_header(void) {
         }
     }
  
-    /* Start both the borders and label row with the left line */
-    strcat(border, "|");
+    /* Start label row with the left line */
     strcat(labels, "|");
     
     /* Appends each subcolumn of the table */
@@ -219,10 +235,6 @@ void print_header(void) {
         name[0] = (char) i + BASE_PHIL_NAME;
         name[1] = '\0';
         
-        /* Appends all the '=' with a right line to the borders */
-        strcat(border, column_border);
-        strcat(border, "|");
-        
         /* Appends the padding, name, and line to the labels */
         strcat(labels, left_padding);
         strcat(labels, name);
@@ -231,15 +243,43 @@ void print_header(void) {
     }
 
     /* Actually prints out the three header rows to stdout */
-    printf("%s\n%s\n%s\n", border, labels, border);
+    print_horizontal_border();
+    printf("%s\n", labels);
+    print_horizontal_border();
+}
+
+/* Wrapper for error checking sem_wait() */
+void wrap_sem_wait(sem_t *sem) {
+    int err;
+    
+    err = sem_wait(sem);
+    if (err) {
+        perror("sem_wait failed");
+        free(forks);
+        free(table);
+        exit(EXIT_FAILURE);
+    }
+}
+
+/* Wrapper for error checking sem_post() */
+void wrap_sem_post(sem_t *sem) {
+    int err;
+    
+    err = sem_post(sem);
+    if (err) {
+        perror("sem_post failed");
+        free(forks);
+        free(table);
+        exit(EXIT_FAILURE);
+    }
 }
 
 /* Prints out a change in the forks a philosopher grabbed */
 void print_fork(int *fork, int holding) {
-    sem_wait(&printing);
+    wrap_sem_wait(&printing);
     *fork = holding;
     print_table();
-    sem_post(&printing);   
+    wrap_sem_post(&printing);   
 }
 
 /* Executes philosopher's behaviour, ran by initialized threads */
@@ -278,50 +318,50 @@ void *dine(void *id) {
         }
 
         /* Blocks until first fork */
-        sem_wait(first_fork);
+        wrap_sem_wait(first_fork);
         print_fork(fork1, HELD);
         
         /* Blocks until second fork */
-        sem_wait(second_fork); 
+        wrap_sem_wait(second_fork); 
         print_fork(fork2, HELD);
 
         /* The philosopher can now begin eating with their two forks */
 
-        sem_wait(&printing);
+        wrap_sem_wait(&printing);
         strcpy(table[whoami].state, "Eat  ");
         print_table();
-        sem_post(&printing);
+        wrap_sem_post(&printing);
         
         /* Philosophers take a random amount of time eating */
         dawdle();
         
         /* Philospher finished eating */
-        sem_wait(&printing);
+        wrap_sem_wait(&printing);
         strcpy(table[whoami].state, "     ");
         print_table();
-        sem_post(&printing);
+        wrap_sem_post(&printing);
 
         /* Release our second fork */
-        sem_post(second_fork);
+        wrap_sem_post(second_fork);
         print_fork(fork2, !HELD);
         
         /* Release our first fork */
-        sem_post(first_fork);
+        wrap_sem_post(first_fork);
         print_fork(fork1, !HELD);
 
         /* Philosphers can now freely think for a random amount of time */
-        sem_wait(&printing);
+        wrap_sem_wait(&printing);
         strcpy(table[whoami].state, "Think");
         print_table();
-        sem_post(&printing);
+        wrap_sem_post(&printing);
         
         dawdle();
 
         /* Thinking philosophers will become hungry after thinking */
-        sem_wait(&printing);
+        wrap_sem_wait(&printing);
         strcpy(table[whoami].state, "     ");
         print_table();
-        sem_post(&printing);
+        wrap_sem_post(&printing);
 
         table[whoami].reps -= 1;
     }
