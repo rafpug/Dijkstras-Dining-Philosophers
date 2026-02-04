@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include <pthread.h>
 #include <semaphore.h>
 
@@ -373,6 +374,7 @@ int main(int argc, char *argv[]) {
         perror("Failed to init semaphore");
         free(forks);    
         free(table);
+        exit(EXIT_FAILURE);
     }
 
     /* Initializes the table structures for each philosopher
@@ -407,7 +409,7 @@ int main(int argc, char *argv[]) {
                         dine,
                         (void *) &ids[i]);
     
-        if (res == -1) {
+        if (res) {
             fprintf(stderr, "Child %i: %s\n", i, strerror(res));
             free(forks);
             free(table);
