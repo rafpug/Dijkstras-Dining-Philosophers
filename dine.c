@@ -342,12 +342,12 @@ void *dine(void *id) {
         wrap_sem_post(&printing);
 
         /* Release our second fork */
-        wrap_sem_post(second_fork);
         print_fork(fork2, !HELD);
+        wrap_sem_post(second_fork);
         
         /* Release our first fork */
-        wrap_sem_post(first_fork);
         print_fork(fork1, !HELD);
+        wrap_sem_post(first_fork);
 
         /* Philosphers can now freely think for a random amount of time */
         wrap_sem_wait(&printing);
