@@ -397,7 +397,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
-    table = (struct Philosopher *) calloc(NUM_PHILOSOPHERS, sizeof(struct Philosopher));    
+    table = (struct Philosopher *) calloc(NUM_PHILOSOPHERS, 
+                                            sizeof(struct Philosopher));
     if (!table) {
         perror("Calloc failed");
         exit(EXIT_FAILURE);
@@ -464,7 +465,7 @@ int main(int argc, char *argv[]) {
     }
     sem_destroy(&printing);
 
-    print_header();
+    print_horizontal_border();
 
     free(forks);
     free(table);
